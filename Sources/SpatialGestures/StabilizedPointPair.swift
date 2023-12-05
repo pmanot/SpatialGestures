@@ -8,9 +8,7 @@ import SwiftUI
 import Vision
 
 public struct StabilizedPointPair: Hashable, Equatable {
-    @StabilizedPoint
     public var a: CGPoint?
-    @StabilizedPoint
     public var b: CGPoint?
     
     public var distance: CGFloat? {
@@ -54,4 +52,13 @@ public struct StabilizedPointPair: Hashable, Equatable {
         }
         return (distance < threshold)
     }
+}
+
+extension CGPoint: Hashable {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(self.x)
+        hasher.combine(self.y)
+    }
+    
+    
 }

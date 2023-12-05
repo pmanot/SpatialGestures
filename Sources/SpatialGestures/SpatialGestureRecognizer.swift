@@ -24,7 +24,7 @@ final public class SpatialGestureRecognizer: ObservableObject {
     public init() {
         self.cameraModel = CameraViewModel()
         self.poseDetector = HandPoseDetector()
-        self.pinchThreshold = 0.1
+        self.pinchThreshold = 0.02
         self.dragThreshold = 0.01
     }
     
@@ -64,6 +64,7 @@ final public class SpatialGestureRecognizer: ObservableObject {
             Task { @MainActor in
                 do {
                     let fingertips = try await self.poseDetector.detectFingertips(from: pixelBuffer)
+                    print(fingertips)
                     self.detect(with: fingertips, in: proxy)
                     var ciImage = CIImage(cvPixelBuffer: pixelBuffer)
                     ciImage = ciImage.oriented(.upMirrored)
@@ -100,8 +101,9 @@ final public class SpatialGestureRecognizer: ObservableObject {
         
         self.leftPinched = leftStabilizedPointPair.isPinched(threshold: pinchThreshold)
         self.rightPinched = rightStabilizedPointPair.isPinched(threshold: pinchThreshold)
-        
+        print("LEFT", leftPinched)
         if let leftPosition = self.leftStabilizedPointPair.position, let rightPosition = self.rightStabilizedPointPair.position {
+            
             self.distance = abs(leftPosition.distance(from: rightPosition))
             self.center = (leftPosition + rightPosition) / 2
         }
@@ -112,6 +114,8 @@ final public class SpatialGestureRecognizer: ObservableObject {
             default:
                 handleTapGesture()
         }
+        
+        print("GESTURE: ", gesture)
     }
     
     private func handleScaleGesture() {

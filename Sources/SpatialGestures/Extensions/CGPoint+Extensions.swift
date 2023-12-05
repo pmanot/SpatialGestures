@@ -14,12 +14,14 @@ extension CGPoint {
     }
 }
 
-func calculateAngle(_ point1: CGPoint, _ point2: CGPoint) -> CGFloat {
+public func calculateAngle(_ point1: CGPoint, _ point2: CGPoint) -> CGFloat {
     let deltaX = point2.x - point1.x
     let deltaY = point2.y - point1.y
     
-    let angleRadians = atan2(deltaY, deltaX)
-    
+    var angleRadians = atan2(deltaY, deltaX)
+    if angleRadians < 0 {
+        angleRadians += 2*(.pi)
+    }
     return angleRadians
 }
 

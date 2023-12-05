@@ -6,70 +6,43 @@ import Foundation
 import SwiftUI
 
 @propertyWrapper
-public struct StabilizedPoint {
-    /// Maximum number of values to average out.
-    private let sampleSize: Int = 5
-    /// Minimum delta required to clear the average and set a new value.
-    private let minimumDelta: CGFloat = 2
+public struct StabilizedPoint: DynamicProperty, Hashable, Equatable {
+    let frameCountThreshold: Int = 10
+    let movementThreshold: CGFloat = 5
 
-    private var previousPoints: [CGPoint] = []
+    var previousPoints: [CGPoint] = []
     private var value: CGPoint?
-    
+
     public var wrappedValue: CGPoint? {
-        get {
-            value
-        } set {
-            updateValue(oldValue: value, newValue: newValue)
-        }
+        get { value }
+        set { setValue(newValue) }
     }
-    
+
     public init(wrappedValue: CGPoint?) {
         self.value = wrappedValue
     }
-    
-    private mutating func updateValue(
-        oldValue: CGPoint?,
-        newValue: CGPoint?
-    ) {
-        guard let newValue = newValue else {
-            value = nil
-            
-            return
-        }
-        
-        guard let oldValue else {
-            value = newValue
-            
-            return
-        }
-        
-        if previousPoints.count < sampleSize {
+
+    mutating private func setValue(_ newValue: CGPoint?) {
+        let previousValue = value
+
+        guard let newValue = newValue else { value = newValue; return }
+        guard let oldValue = previousValue else { value = newValue; return }
+
+        if previousPoints.count < frameCountThreshold {
+            previousPoints.append(newValue)
+        } else {
+            previousPoints = []
             previousPoints.append(newValue)
         }
-        
+
         let averagePoint = previousPoints.reduce(.zero, +) / CGFloat(previousPoints.count)
-        
-        if abs(oldValue.distance(from: newValue)) > minimumDelta {
+
+        if abs(oldValue.distance(from: newValue)) > movementThreshold {
             previousPoints = [newValue]
-            
+            print("NEW VALUE \(newValue)")
             value = newValue
         } else {
             value = averagePoint
         }
-    }
-}
-
-extension StabilizedPoint: Hashable {
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(sampleSize)
-        hasher.combine(minimumDelta)
-        
-        previousPoints.forEach {
-            $0.x.hash(into: &hasher)
-            $0.y.hash(into: &hasher)
-        }
-        
-        hasher.combine(value?.x)
-        hasher.combine(value?.y)
     }
 }
