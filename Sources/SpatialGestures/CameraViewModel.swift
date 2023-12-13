@@ -10,7 +10,7 @@ import SwiftUI
 import Vision
 
 class CameraViewModel: NSObject, ObservableObject {
-    var outputHandler: ((CVPixelBuffer) -> ())?
+    var outputHandler: (@MainActor (CVPixelBuffer) -> ())?
         
     private let videoDataOutputQueue = DispatchQueue.main
     private var cameraFeedSession: AVCaptureSession?
@@ -79,6 +79,7 @@ class CameraViewModel: NSObject, ObservableObject {
 // MARK: - AVCaptureVideoDataOutputSampleBufferDelegate
 
 extension CameraViewModel: AVCaptureVideoDataOutputSampleBufferDelegate {
+    @MainActor
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
         

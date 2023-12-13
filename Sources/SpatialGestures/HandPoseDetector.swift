@@ -154,7 +154,7 @@ class HandPoseDetector: @unchecked Sendable {
 }
 
 extension HandPoseDetector {
-    func detectFingertips(from image: CIImage, maximumHandCount: Int = 2) async throws -> [Hand.Fingertips] {
+    func detectFingertips(from image: CIImage, maximumHandCount: Int = 2) async throws -> Set<Hand.Fingertips>{
         let request = VNDetectHumanHandPoseRequest()
         request.revision = VNDetectHumanHandPoseRequestRevision1
         request.maximumHandCount = maximumHandCount
@@ -162,7 +162,7 @@ extension HandPoseDetector {
         return try await performFingertipsDetection(request: request, image: image)
     }
     
-    func detectFingertips(from image: CIImage, maximumHandCount: Int = 2) throws -> [Hand.Fingertips] {
+    func detectFingertips(from image: CIImage, maximumHandCount: Int = 2) throws -> Set<Hand.Fingertips> {
         let request = VNDetectHumanHandPoseRequest()
         request.revision = VNDetectHumanHandPoseRequestRevision1
         request.maximumHandCount = maximumHandCount
@@ -170,28 +170,30 @@ extension HandPoseDetector {
         return try performFingertipsDetection(request: request, image: image)
     }
     
-    func detectFingertips(from image: CGImage, maximumHandCount: Int = 2) async throws -> [Hand.Fingertips] {
+    func detectFingertips(from image: CGImage, maximumHandCount: Int = 2) async throws -> Set<Hand.Fingertips> {
         let request = VNDetectHumanHandPoseRequest()
         request.maximumHandCount = maximumHandCount
         
         return try await performFingertipsDetection(request: request, image: image)
     }
     
-        func detectFingertips(from pixelBuffer: CVImageBuffer, maximumHandCount: Int = 2) async throws -> [Hand.Fingertips] {
+    @MainActor
+    func detectFingertips(from pixelBuffer: CVImageBuffer, maximumHandCount: Int = 2) async throws -> Set<Hand.Fingertips> {
         let request = VNDetectHumanHandPoseRequest()
         request.maximumHandCount = maximumHandCount
         
         return try await performFingertipsDetection(request: request, pixelBuffer: pixelBuffer)
     }
     
-    func detectFingertips(from pixelBuffer: CVImageBuffer, maximumHandCount: Int = 2) throws -> [Hand.Fingertips] {
+    func detectFingertips(from pixelBuffer: CVImageBuffer, maximumHandCount: Int = 2) throws -> Set<Hand.Fingertips> {
         let request = VNDetectHumanHandPoseRequest()
         request.maximumHandCount = maximumHandCount
         
         return try performFingertipsDetection(request: request, pixelBuffer: pixelBuffer)
     }
     
-    private func performFingertipsDetection(request: VNDetectHumanHandPoseRequest, pixelBuffer: CVImageBuffer) async throws -> [Hand.Fingertips] {
+    @MainActor
+    private func performFingertipsDetection(request: VNDetectHumanHandPoseRequest, pixelBuffer: CVImageBuffer) async throws -> Set<Hand.Fingertips> {
         let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer)
         try handler.perform([request])
         
@@ -202,7 +204,7 @@ extension HandPoseDetector {
         return fingertips
     }
     
-    private func performFingertipsDetection(request: VNDetectHumanHandPoseRequest, pixelBuffer: CVImageBuffer) throws -> [Hand.Fingertips] {
+    private func performFingertipsDetection(request: VNDetectHumanHandPoseRequest, pixelBuffer: CVImageBuffer) throws -> Set<Hand.Fingertips> {
         let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer)
         try handler.perform([request])
         
@@ -213,7 +215,7 @@ extension HandPoseDetector {
         return fingertips
     }
     
-    private func performFingertipsDetection(request: VNDetectHumanHandPoseRequest, image: CIImage) async throws -> [Hand.Fingertips] {
+    private func performFingertipsDetection(request: VNDetectHumanHandPoseRequest, image: CIImage) async throws -> Set<Hand.Fingertips> {
         let handler = VNImageRequestHandler(ciImage: image, orientation: .up)
         try handler.perform([request])
         
@@ -224,7 +226,7 @@ extension HandPoseDetector {
         return fingertips
     }
     
-    private func performFingertipsDetection(request: VNDetectHumanHandPoseRequest, image: CIImage) throws -> [Hand.Fingertips] {
+    private func performFingertipsDetection(request: VNDetectHumanHandPoseRequest, image: CIImage) throws -> Set<Hand.Fingertips> {
         let handler = VNImageRequestHandler(ciImage: image, orientation: .up)
         try handler.perform([request])
         
@@ -235,7 +237,7 @@ extension HandPoseDetector {
         return fingertips
     }
     
-    private func performFingertipsDetection(request: VNDetectHumanHandPoseRequest, image: CGImage) async throws -> [Hand.Fingertips] {
+    private func performFingertipsDetection(request: VNDetectHumanHandPoseRequest, image: CGImage) async throws -> Set<Hand.Fingertips> {
         let handler = VNImageRequestHandler(cgImage: image, orientation: .up)
         try handler.perform([request])
         
@@ -246,8 +248,8 @@ extension HandPoseDetector {
         return fingertips
     }
     
-    private func processFingertipsResults(_ results: [VNHumanHandPoseObservation]) async throws -> [Hand.Fingertips] {
-        var fingertips: [Hand.Fingertips] = []
+    private func processFingertipsResults(_ results: [VNHumanHandPoseObservation]) async throws -> Set<Hand.Fingertips> {
+        var fingertips: Set<Hand.Fingertips> = []
         
         await withTaskGroup(of: Hand.Fingertips.self) { taskGroup in
             for result in results {
@@ -259,18 +261,18 @@ extension HandPoseDetector {
             }
             
             for await fingertip in taskGroup {
-                fingertips.append(fingertip)
+                fingertips.insert(fingertip)
             }
         }
         
         return fingertips
     }
     
-    private func processFingertipsResults(_ results: [VNHumanHandPoseObservation]) throws -> [Hand.Fingertips] {
-        var fingertips: [Hand.Fingertips] = []
+    private func processFingertipsResults(_ results: [VNHumanHandPoseObservation]) throws -> Set<Hand.Fingertips> {
+        var fingertips: Set<Hand.Fingertips> = []
         
         for result in results {
-            fingertips.append(self.createFingertips(from: result))
+            fingertips.insert(self.createFingertips(from: result))
         }
         
         return fingertips
@@ -279,7 +281,7 @@ extension HandPoseDetector {
     private func createFingertips(from result: VNHumanHandPoseObservation) -> Hand.Fingertips {
         let chirality = result.chirality
         
-        var fingertips = Hand.Fingertips(chirality: chirality)
+        var fingertips = Hand.Fingertips(chirality: chirality, confidence: result.confidence)
         
         if result.confidence > 0.5 {
             if let thumbPoint = try? result.recognizedPoint(.thumbTip) {
@@ -321,16 +323,20 @@ public extension VNRecognizedPoint {
 }
 
 public extension CGPoint {
-    func projectNormalizedToGeometry(in proxy: GeometryProxy, mirrored: Bool = true) -> CGPoint {
+    func projectNormalizedToGeometry(in proxy: GeometryProxy, coordinateSpace: CoordinateSpace = .global, mirrored: Bool = true) -> CGPoint {
+        self.projectNormalizedToRect(in: proxy.frame(in: coordinateSpace), mirrored: mirrored)
+    }
+    
+    func projectNormalizedToRect(in rect: CGRect, mirrored: Bool = true) -> CGPoint {
         //let point = CGPoint(x: self.x.modulate(fromRange: 0.1...0.9, toRange: 0...1), y: self.y.modulate(fromRange: 0.1...0.9, toRange: 0...1))
         let point = self
         
         if mirrored {
-            return CGPoint(x: (1 - point.x) * proxy.frame(in: .global).width,
-                           y: (1 - point.y) * proxy.frame(in: .global).height)
+            return CGPoint(x: (1 - point.x) * rect.width,
+                           y: (1 - point.y) * rect.height)
         } else {
-            return CGPoint(x: point.x * proxy.frame(in: .global).width,
-                           y: (1 - point.y) * proxy.frame(in: .global).height)
+            return CGPoint(x: point.x * rect.width,
+                           y: (1 - point.y) * rect.height)
         }
     }
 }

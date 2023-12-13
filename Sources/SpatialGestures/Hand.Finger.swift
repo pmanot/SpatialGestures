@@ -30,9 +30,10 @@ extension Hand {
         }
     }
     
-    public struct Fingertips: Identifiable, Sendable {
+    public struct Fingertips: Identifiable, Hashable, Sendable {
         public let id = UUID()
         public let chirality: VNChirality
+        public let confidence: VNConfidence
         
         public var thumb: Joint?
         public var index: Joint?
