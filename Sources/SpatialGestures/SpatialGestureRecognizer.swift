@@ -8,7 +8,7 @@ import SwiftUI
 
 @MainActor
 final public class SpatialGestureRecognizer: ObservableObject {
-    private var cameraModel: CameraViewModel
+    private var cameraModel: CameraViewModel?
     private var poseDetector: HandPoseDetector
     
     @Published public private(set) var detectionStarted: Bool = false
@@ -21,7 +21,6 @@ final public class SpatialGestureRecognizer: ObservableObject {
     @Published public var gesture: SpatialGestureRecognizer.Value?
     
     public init() {
-        self.cameraModel = CameraViewModel()
         self.poseDetector = HandPoseDetector()
         self.pinchThreshold = 0.02
         self.dragThreshold = 0.01
@@ -45,9 +44,30 @@ final public class SpatialGestureRecognizer: ObservableObject {
     private var rightTapStarted: Bool = false
     
     // MARK: - Public Methods
+    public func startDetection(proxy: GeometryProxy, cameraOutputHandler: inout (CVPixelBuffer) -> ()) {
+        self.detectionStarted = true
+        cameraOutputHandler = { pixelBuffer in
+            Task { @MainActor in
+                do {
+                    let fingertips = try await self.poseDetector.detectFingertips(from: pixelBuffer)
+                    
+                    self.detect(with: fingertips, in: proxy)
+                    var ciImage = CIImage(cvPixelBuffer: pixelBuffer)
+                    ciImage = ciImage.oriented(.upMirrored)
+                    let context: CIContext = CIContext.init(options: nil)
+                    let cgImage: CGImage = context.createCGImage(ciImage, from: ciImage.extent)!
+                    self.image = Image(image: PlatformImage(cgImage: cgImage))
+                } catch {
+                    // Handle error
+                }
+            }
+        }
+        cameraModel?.startFeed()
+    }
+    
     public func startDetection(proxy: GeometryProxy) {
         self.detectionStarted = true
-        cameraModel.startFeed()
+        cameraModel?.startFeed()
         setCameraOutputHandler(proxy: proxy)
     }
     
@@ -59,7 +79,9 @@ final public class SpatialGestureRecognizer: ObservableObject {
     
     // MARK: - Private Methods
     private func setCameraOutputHandler(proxy: GeometryProxy) {
-        self.cameraModel.outputHandler = { pixelBuffer in
+        self.cameraModel = CameraViewModel()
+
+        self.cameraModel?.outputHandler = { pixelBuffer in
             Task { @MainActor in
                 do {
                     let fingertips = try await self.poseDetector.detectFingertips(from: pixelBuffer)
@@ -79,8 +101,8 @@ final public class SpatialGestureRecognizer: ObservableObject {
     
     @MainActor
     private func stopCameraFeed() {
-        self.cameraModel.stopFeed()
-        self.cameraModel.outputHandler = nil
+        self.cameraModel?.stopFeed()
+        self.cameraModel?.outputHandler = nil
     }
     
     @MainActor
